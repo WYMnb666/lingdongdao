@@ -1,0 +1,148 @@
+package com.example.dynamicisland
+
+import android.content.Context
+import android.graphics.*
+import android.view.View
+
+class IslandView(context: Context) : View(context) {
+
+    enum class Mode { IDLE, MINI, EXPANDED }
+
+    var mode: Mode = Mode.IDLE
+        set(v) { field = v; invalidate() }
+
+    var radiusPx = 0f
+        set(v) { field = v; invalidate() }
+
+    private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK }
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = dp(15f)
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+    private val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#B3FFFFFF")
+        textSize = dp(12f)
+    }
+    private val coverPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        strokeCap = Paint.Cap.ROUND
+        strokeWidth = dp(3f)
+    }
+    private val lyricPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = dp(14f)
+    }
+    private val lyricActivePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = dp(15f)
+        color = Color.WHITE
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+
+    private val path = Path()
+
+    override fun onDraw(canvas: Canvas) {
+        path.reset()
+        val r = if (radiusPx > 0) radiusPx else height / 2f
+        path.addRoundRect(0f, 0f, width.toFloat(), height.toFloat(), r, r, Path.Direction.CW)
+        canvas.drawPath(path, bgPaint)
+
+        val s = MediaStateHolder.current
+        when (mode) {
+            Mode.IDLE -> {}
+            Mode.MINI -> drawMini(canvas, s)
+            Mode.EXPANDED -> drawExpanded(canvas, s)
+        }
+
+        if (s.isPlaying) postInvalidateOnAnimation()
+    }
+
+    private fun drawMini(canvas: Canvas, s: MediaStateHolder.Snapshot) {
+        val pad = dp(10f)
+        val size = height - pad * 2
+        drawCover(canvas, s.cover, pad, pad, size, dp(8f))
+        drawWave(canvas, width - pad - dp(26f), height / 2f, dp(18f))
+    }
+
+    private fun drawExpanded(canvas: Canvas, s: MediaStateHolder.Snapshot) {
+        val pad = dp(16f)
+        val coverSize = dp(48f)
+        drawCover(canvas, s.cover, pad, pad, coverSize, dp(12f))
+
+        val titleX = pad + coverSize + dp(12f)
+        canvas.save()
+        canvas.clipRect(titleX, pad, width - pad, pad + coverSize)
+        canvas.drawText(s.title.ifBlank { "未播放" }, titleX, pad + dp(20f), textPaint)
+        canvas.drawText(s.artist, titleX, pad + dp(38f), subPaint)
+        canvas.restore()
+
+        val barY = pad + coverSize + dp(8f)
+        barPaint.color = Color.parseColor("#33FFFFFF")
+        barPaint.style = Paint.Style.FILL
+        canvas.drawRoundRect(pad, barY, width - pad, barY + dp(3f), dp(2f), dp(2f), barPaint)
+        val p = if (s.durationMs > 0) s.positionMs.toFloat() / s.durationMs else 0f
+        barPaint.color = Color.WHITE
+        canvas.drawRoundRect(
+            pad, barY, pad + (width - pad * 2) * p, barY + dp(3f),
+            dp(2f), dp(2f), barPaint
+        )
+
+        val lyricTop = barY + dp(12f)
+        canvas.save()
+        canvas.clipRect(0f, lyricTop, width.toFloat(), height.toFloat())
+        val lyrics = MediaStateHolder.lyrics
+        if (lyrics.isEmpty()) {
+            lyricPaint.color = Color.parseColor("#66FFFFFF")
+            lyricPaint.textSize = dp(12f)
+            canvas.drawText("暂无歌词", pad, lyricTop + dp(18f), lyricPaint)
+        } else {
+            val current = MediaStateHolder.currentLine.coerceAtLeast(0)
+            val lineH = dp(24f)
+            val centerY = lyricTop + dp(20f)
+            val startIdx = (current - 1).coerceAtLeast(0)
+            val endIdx = (current + 2).coerceAtMost(lyrics.lastIndex)
+            for (i in startIdx..endIdx) {
+                val line = lyrics[i]
+                val y = centerY + (i - current) * lineH
+                if (i == current) {
+                    lyricActivePaint.color = Color.WHITE
+                    canvas.drawText(line.text, pad, y, lyricActivePaint)
+                } else {
+                    lyricPaint.color = Color.parseColor("#80FFFFFF")
+                    canvas.drawText(line.text, pad, y, lyricPaint)
+                }
+            }
+        }
+        canvas.restore()
+    }
+
+    private fun drawCover(canvas: Canvas, bmp: Bitmap?, x: Float, y: Float, size: Float, r: Float) {
+        if (bmp == null) {
+            coverPaint.color = Color.parseColor("#2A2A2A")
+            canvas.drawRoundRect(x, y, x + size, y + size, r, r, coverPaint)
+            return
+        }
+        canvas.save()
+        path.reset()
+        path.addRoundRect(x, y, x + size, y + size, r, r, Path.Direction.CW)
+        canvas.clipPath(path)
+        val rectDst = RectF(x, y, x + size, y + size)
+        canvas.drawBitmap(bmp, null, rectDst, coverPaint)
+        canvas.restore()
+    }
+
+    private fun drawWave(canvas: Canvas, cx: Float, cy: Float, h: Float) {
+        val t = (System.currentTimeMillis() % 900) / 900f
+        val n = 4
+        val gap = dp(6f)
+        for (i in 0 until n) {
+            val phase = t + i * 0.13f
+            val s = (0.3f + 0.7f * Math.abs(Math.sin(phase * Math.PI * 2))).toFloat()
+            val bh = h * s
+            val x = cx + i * gap
+            canvas.drawLine(x, cy - bh / 2, x, cy + bh / 2, barPaint)
+        }
+    }
+
+    private fun dp(v: Float) = v * resources.displayMetrics.density
+}
