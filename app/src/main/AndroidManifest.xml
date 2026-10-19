@@ -1,30 +1,30 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.INTERNET" />
+<？XML版本="1.0"编码="utf-8"？>
+<表明xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission安卓：名称="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission安卓：名称="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission安卓：名称="安卓。许可。前景服务特殊使用"/>
+    <uses-permissionAndroid：名称="android.permission.INTERNET"/>
     
-    <application
-        android:label="灵动岛"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+    <应用
+        安卓：标签="灵动岛"
+        安卓：主题="@style/Theme.AppCompat.Light.NoActionBar">
         
-        <activity android:name=".MainActivity" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <活动安卓：名称=".MainActivity“Android：已导出="真">
+            <意图过滤器>
+                <行动Android：名称="android.intent.action.MAIN"/>
+                <类别安卓：名称="安卓。意图。类别。发射器"/>
+            </意图过滤器>
+        </活动>
         
-        <service android:name=".NotifListenerService" android:exported="false"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
+        <服务安卓：名称=".NotifListenerService"Android：已导出="假"
+安卓：权限="安卓。许可。bind_NOTIFICATION_LISTENER_SERVICE">
+            <意图过滤器>
+                <行动安卓：名称="安卓。服务。通知。NotificationListenerService""/>
+            </意图过滤器>
+        </服务>
         
-        <service android:name=".IslandService" android:exported="false"
-            android:foregroundServiceType="specialUse" />
+        <服务安卓：名称=".IslandService"Android：已导出="假"
+安卓：前台服务类型="specialUse"/>
             
-    </application>
-</manifest>
+    </应用>
+    </表明>
