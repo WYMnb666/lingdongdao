@@ -1,0 +1,80 @@
+package com.example.dynamicisland
+
+import android.content.ComponentName
+import android.media.MediaMetadata
+import android.media.session.MediaController
+import android.media.session.MediaSessionManager
+import android.media.session.PlaybackState
+import android.service.notification.NotificationListenerService
+import android.util.Log
+
+class NotifListenerService : NotificationListenerService() {
+
+    private var mediaSessionManager: MediaSessionManager? = null
+    private var activeController: MediaController? = null
+
+    private val callback = object : MediaController.Callback() {
+        override fun onMetadataChanged(metadata: MediaMetadata?) {
+            refreshFromController()
+        }
+
+        override fun onPlaybackStateChanged(state: PlaybackState?) {
+            refreshFromController()
+        }
+
+        override fun onSessionDestroyed() {
+            activeController?.unregisterCallback(this)
+            activeController = null
+            MediaStateHolder.updateMedia(MediaStateHolder.Snapshot())
+        }
+    }
+
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        mediaSessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
+        val listener = ComponentName(this, NotifListenerService::class.java)
+        val sessions = mediaSessionManager!!.getActiveSessions(listener)
+        sessions.firstOrNull()?.let { attach(it) }
+    }
+
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        activeController?.unregisterCallback(callback)
+        activeController = null
+    }
+
+    private fun attach(controller: MediaController) {
+        if (controller == activeController) return
+        activeController?.unregisterCallback(callback)
+        activeController = controller
+        controller.registerCallback(callback)
+        refreshFromController()
+    }
+
+    private fun refreshFromController() {
+        val c = activeController ?: return
+        val md = c.metadata ?: return
+        val pb = c.playbackState
+
+        val title = md.getString(MediaMetadata.METADATA_KEY_TITLE) ?: ""
+        val artist = md.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
+        val cover = md.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+            ?: md.getBitmap(MediaMetadata.METADATA_KEY_ART)
+
+        val isPlaying = pb?.state == PlaybackState.STATE_PLAYING
+        val positionMs = pb?.position ?: 0L
+        val durationMs = md.getLong(MediaMetadata.METADATA_KEY_DURATION)
+
+        MediaStateHolder.updateMedia(
+            MediaStateHolder.Snapshot(
+                title = title,
+                artist = artist,
+                cover = cover,
+                isPlaying = isPlaying,
+                positionMs = positionMs,
+                durationMs = durationMs,
+                packageName = c.packageName,
+            )
+        )
+    }
+}
